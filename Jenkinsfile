@@ -3,6 +3,7 @@
 
 import io.jenkins.blueocean.rest.impl.pipeline.*
 import static groovy.json.JsonOutput.*
+import com.cloudbees.workflow.rest.external.*
 
 def jobName = currentBuild.projectName
 
@@ -53,10 +54,9 @@ node('master') {
                         "pause_duration_millis": node.timingInfo.pauseDurationMillis])
     }
 
-    //def parameters = Jenkins.instance.getItemByFullName(jobName).getBuildByNumber(currentBuild.number).getAllActions()
     def action = Jenkins.instance.getItemByFullName(jobName).getBuildByNumber(currentBuild.number).getAction(jenkins.metrics.impl.TimeInQueueAction)
+    RunExt runner = new RunExt()
 
-    println(action.getQueuingDurationMillis())
     pipelineInfo = [
         "jenkins_pipeline_info": [
             "id": null,
@@ -66,7 +66,7 @@ node('master') {
             "end_time_millis": currentBuild.startTimeInMillis + currentBuild.duration,
             "duration_millis": currentBuild.duration,
             "queue_duration_millis": action.getQueuingDurationMillis(),
-            "pause_duration_millis": null,
+            "pause_duration_millis": runner.getPauseDurationMillis(),
             "stages": stagesInfo
         ]
     ]
