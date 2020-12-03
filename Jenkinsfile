@@ -1,3 +1,5 @@
+import io.jenkins.blueocean.rest.impl.pipeline.*
+
 node('master') {
     stage('sleep') {
         // sleep(10)
@@ -28,5 +30,19 @@ node('master') {
                 }
             }
         }
+    }
+    stage("test"){
+        def jobName = "folder/project/master"
+        def run = Jenkins.instance.getItemByFullName(jobName).getBuildByNumber(42)
+
+        PipelineNodeGraphVisitor visitor = new PipelineNodeGraphVisitor(run)
+        def stageNodes = visitor.getPipelineNodes().findAll { it.getType() == FlowNodeWrapper.NodeType.STAGE }
+
+            for (def node: stageNodes) {
+                String stageName = node.getDisplayName()
+                println "Result of stage ${node.getDisplayName()} is ${node.status.result} (${node.status.state})"
+                println " timings: start=${node.timingInfo.startTimeMillis}ms; durationMillis=${node.timingInfo.totalDurationMillis}ms; paused=${node.timingInfo.pauseDurationMillis}ms"
+                println "----------------------------------------------------------------"
+            }
     }
 }
