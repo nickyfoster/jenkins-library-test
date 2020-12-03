@@ -56,17 +56,19 @@ node('master') {
 
     def action = Jenkins.instance.getItemByFullName(jobName).getBuildByNumber(currentBuild.number).getAction(jenkins.metrics.impl.TimeInQueueAction)
     RunExt runner = new RunExt()
+    def getQueuingDurationMillis = action.getQueuingDurationMillis()
+    def pauseDurationMillis = runner.getPauseDurationMillis()
 
     pipelineInfo = [
         "jenkins_pipeline_info": [
-            "id": null,
-            "name": null,
+            "id": currentBuild.number,
+            "name": currentBuild.displayName,
             "status": currentBuild.currentResult,
             "start_time_millis": currentBuild.startTimeInMillis,
             "end_time_millis": currentBuild.startTimeInMillis + currentBuild.duration,
             "duration_millis": currentBuild.duration,
-            "queue_duration_millis": action.getQueuingDurationMillis(),
-            "pause_duration_millis": runner.getPauseDurationMillis(),
+            "queue_duration_millis": getQueuingDurationMillis,
+            "pause_duration_millis": pauseDurationMillis,
             "stages": stagesInfo
         ]
     ]
