@@ -1,8 +1,11 @@
 import io.jenkins.blueocean.rest.impl.pipeline.*
 
+def jobName = currentBuild.projectName
+def stagesInfo = []
+
 node('master') {
     stage('sleep') {
-        // sleep(10)
+        sleep(0.8)
     }
 
     stage('get pipe info') {
@@ -12,10 +15,8 @@ node('master') {
 
     stage('last stage') {
         def build = currentBuild.currentResult
-        // println(build)
         def instance = Jenkins.getInstance()
-        def pipe = instance.getItemByFullName("test")
-        // println(pipe)
+        def pipe = instance.getItemByFullName(jobName)
         pipe.getBuilds().each{ b ->
             def cb = b.getNumber()
             if (currentBuild.number == b.getNumber()) {
@@ -31,19 +32,21 @@ node('master') {
             }
         }
     }
-    stage("test"){
-        def jobName = "test"
-        println(currentBuild.number)
-        def run = Jenkins.instance.getItemByFullName(jobName).getBuildByNumber(currentBuild.number)
 
-        PipelineNodeGraphVisitor visitor = new PipelineNodeGraphVisitor(run)
-        def stageNodes = visitor.getPipelineNodes().findAll { it.getType() == FlowNodeWrapper.NodeType.STAGE }
 
-            for (def node: stageNodes) {
-                String stageName = node.getDisplayName()
-                println "Result of stage ${node.getDisplayName()} is ${node.status.result} (${node.status.state})"
-                println " timings: start=${node.timingInfo.startTimeMillis}ms; durationMillis=${node.timingInfo.totalDurationMillis}ms; paused=${node.timingInfo.pauseDurationMillis}ms"
-                println "----------------------------------------------------------------"
-            }
-    }
+def run = Jenkins.instance.getItemByFullName(jobName).getBuildByNumber(currentBuild.number)
+
+PipelineNodeGraphVisitor visitor = new PipelineNodeGraphVisitor(run)
+def stageNodes = visitor.getPipelineNodes().findAll { it.getType() == FlowNodeWrapper.NodeType.STAGE }
+
+for (def node: stageNodes) {
+    //String stageName = node.getDisplayName()
+    stagesInfo.add(["name": node.getDisplayName(),
+               "status": "${node.status.result} (${node.status.state})",
+               "start_time_millis": node.timingInfo.startTimeMillis,
+               "duration_millis": node.timingInfo.totalDurationMillis,
+               "pause_duration_millis": node.timingInfo.pauseDurationMillis])
+}
+println(stagesInfo)
+
 }
