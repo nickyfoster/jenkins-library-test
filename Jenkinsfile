@@ -32,8 +32,9 @@ node('master') {
         }
     }
     stage("test"){
-        def jobName = "folder/project/master"
-        def run = Jenkins.instance.getItemByFullName(jobName).getBuildByNumber(42)
+        def jobName = "test"
+        println(currentBuild.number)
+        def run = Jenkins.instance.getItemByFullName(jobName).getBuildByNumber(currentBuild.number)
 
         PipelineNodeGraphVisitor visitor = new PipelineNodeGraphVisitor(run)
         def stageNodes = visitor.getPipelineNodes().findAll { it.getType() == FlowNodeWrapper.NodeType.STAGE }
