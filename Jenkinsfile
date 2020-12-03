@@ -1,7 +1,11 @@
+// https://plugins.jenkins.io/metrics
+// https://plugins.jenkins.io/blueocean
+
 import io.jenkins.blueocean.rest.impl.pipeline.*
+import static groovy.json.JsonOutput.*
 
 def jobName = currentBuild.projectName
-def stagesInfo = []
+
 
 node('master') {
     stage('sleep') {
@@ -15,8 +19,10 @@ node('master') {
 
     stage('last stage') {
         def build = currentBuild.currentResult
+        // println(build)
         def instance = Jenkins.getInstance()
         def pipe = instance.getItemByFullName(jobName)
+        // println(pipe)
         pipe.getBuilds().each{ b ->
             def cb = b.getNumber()
             if (currentBuild.number == b.getNumber()) {
@@ -33,20 +39,36 @@ node('master') {
         }
     }
 
+    def run = Jenkins.instance.getItemByFullName(jobName).getBuildByNumber(currentBuild.number)
+    PipelineNodeGraphVisitor visitor = new PipelineNodeGraphVisitor(run)
+    def stageNodes = visitor.getPipelineNodes().findAll { it.getType() == FlowNodeWrapper.NodeType.STAGE }
+    def stagesInfo = []
 
-def run = Jenkins.instance.getItemByFullName(jobName).getBuildByNumber(currentBuild.number)
+    for (def node: stageNodes) {
+        String stageName = node.getDisplayName()
+        stagesInfo.add(["name": node.getDisplayName(),
+                        "status": "${node.status.result} (${node.status.state})",
+                        "start_time_millis": node.timingInfo.startTimeMillis,
+                        "duration_millis": node.timingInfo.totalDurationMillis,
+                        "pause_duration_millis": node.timingInfo.pauseDurationMillis])
+    }
 
-PipelineNodeGraphVisitor visitor = new PipelineNodeGraphVisitor(run)
-def stageNodes = visitor.getPipelineNodes().findAll { it.getType() == FlowNodeWrapper.NodeType.STAGE }
+    //def parameters = Jenkins.instance.getItemByFullName(jobName).getBuildByNumber(currentBuild.number).getAllActions()
+    def action = Jenkins.instance.getItemByFullName(jobName).getBuildByNumber(currentBuild.number).getAction(jenkins.metrics.impl.TimeInQueueAction)
 
-for (def node: stageNodes) {
-    //String stageName = node.getDisplayName()
-    stagesInfo.add(["name": node.getDisplayName(),
-               "status": "${node.status.result} (${node.status.state})",
-               "start_time_millis": node.timingInfo.startTimeMillis,
-               "duration_millis": node.timingInfo.totalDurationMillis,
-               "pause_duration_millis": node.timingInfo.pauseDurationMillis])
-}
-println(stagesInfo)
-
+    println(action.getQueuingDurationMillis())
+    pipelineInfo = [
+        "jenkins_pipeline_info": [
+            "id": null,
+            "name": null,
+            "status": currentBuild.currentResult,
+            "start_time_millis": currentBuild.startTimeInMillis,
+            "end_time_millis": currentBuild.startTimeInMillis + currentBuild.duration,
+            "duration_millis": currentBuild.duration,
+            "queue_duration_millis": action.getQueuingDurationMillis(),
+            "pause_duration_millis": null,
+            "stages": stagesInfo
+        ]
+    ]
+    println prettyPrint(toJson(pipelineInfo))
 }
